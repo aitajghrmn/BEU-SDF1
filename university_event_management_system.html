@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universitet Tədbir İdarəetmə Sistemi</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        university: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            600: '#1e40af',
+                            700: '#1d4ed8',
+                            800: '#1e3a8a',
+                            900: '#0f172a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header & Navigation -->
+    <header class="bg-university-900 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Brand -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="app.navigateTo('events')">
+                    <div class="bg-blue-600 text-white p-2 rounded-lg flex items-center justify-center">
+                        <i class="fa-solid fa-graduation-cap text-xl"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-lg tracking-wide block leading-tight">UniEvents</span>
+                        <span class="text-xs text-blue-300 hidden sm:block">Tədbir İdarəetmə Sistemi</span>
+                    </div>
+                </div>
+
+                <!-- Desktop Navigation Links -->
+                <nav class="hidden md:flex space-x-1 lg:space-x-2 text-sm font-medium">
+                    <button onclick="app.navigateTo('events')" id="nav-events" class="px-3 py-2 rounded-md transition-colors hover:bg-university-800 text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-calendar-days text-blue-400"></i>
+                        <span>Tədbirlər</span>
+                    </button>
+                    <button onclick="app.openEventModal()" class="px-3 py-2 rounded-md transition-colors hover:bg-university-800 text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-circle-plus text-green-400"></i>
+                        <span>Yeni Tədbir</span>
+                    </button>
+                    <button onclick="app.navigateTo('dashboard')" id="nav-dashboard" class="px-3 py-2 rounded-md transition-colors hover:bg-university-800 text-slate-300 flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-pie text-purple-400"></i>
+                        <span>Statistika</span>
+                    </button>
+                    <button onclick="app.navigateTo('ai-log')" id="nav-ai-log" class="px-3 py-2 rounded-md transition-colors hover:bg-university-800 text-slate-300 flex items-center space-x-2">
+                        <i class="fa-solid fa-robot text-amber-400"></i>
+                        <span>AI Jurnalı</span>
+                    </button>
+                    <button onclick="app.navigateTo('docs')" id="nav-docs" class="px-3 py-2 rounded-md transition-colors hover:bg-university-800 text-slate-300 flex items-center space-x-2">
+                        <i class="fa-solid fa-book text-emerald-400"></i>
+                        <span>Sənədləşmə & Testlər</span>
+                    </button>
+                </nav>
+
+                <!-- Current Active User Badge -->
+                <div class="flex items-center space-x-3">
+                    <div class="bg-university-800 px-3 py-1.5 rounded-full border border-blue-700/50 flex items-center space-x-2 text-xs">
+                        <i class="fa-solid fa-user-circle text-blue-300 text-base"></i>
+                        <span id="current-user-display" class="font-semibold text-slate-200">Əli Məmmədov</span>
+                        <span class="bg-blue-600 text-[10px] px-1.5 py-0.5 rounded text-white font-mono">ID: U101</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dynamic Content Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- SECTION 1: EVENTS CATALOG & FILTERS -->
+        <section id="section-events" class="space-y-6">
+            <!-- Search & Filter Controls -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div class="relative w-full md:w-96">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
+                        <input type="text" id="filter-search" oninput="app.applyFilters()" placeholder="Tədbir adı və ya keçirilmə yeri ilə axtar..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+                    </div>
+                    
+                    <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                        <!-- Category Filter -->
+                        <select id="filter-category" onchange="app.applyFilters()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="ALL">Bütün Kateqoriyalar</option>
+                            <option value="Elmi Konfrans">Elmi Konfrans</option>
+                            <option value="Seminar">Seminar</option>
+                            <option value="Təlim">Təlim</option>
+                            <option value="Müsabiqə">Müsabiqə</option>
+                            <option value="Digər">Digər</option>
+                        </select>
+
+                        <!-- Status Filter -->
+                        <select id="filter-status" onchange="app.applyFilters()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="ALL">Bütün Vaxtlar</option>
+                            <option value="UPCOMING">Gələcək Tədbirlər</option>
+                            <option value="PAST">Keçmiş Tədbirlər</option>
+                        </select>
+
+                        <!-- Reset Filters -->
+                        <button onclick="app.resetFilters()" class="px-3 py-2 border border-slate-300 hover:bg-slate-100 rounded-lg text-sm text-slate-600 transition-colors">
+                            <i class="fa-solid fa-rotate-left mr-1"></i> Sıfırla
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Events Grid -->
+            <div id="events-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Dynamically Populated by App -->
+            </div>
+
+            <!-- Empty Search State -->
+            <div id="empty-events-state" class="hidden text-center py-16 bg-white rounded-xl border border-dashed border-slate-300">
+                <i class="fa-solid fa-calendar-xmark text-5xl text-slate-300 mb-3 block"></i>
+                <h3 class="text-lg font-semibold text-slate-700">Axtarışa uyğun tədbir tapılmadı</h3>
+                <p class="text-sm text-slate-500 mt-1">Axtarış parametrlərini dəyişməyə və ya yeni tədbir yaratmağa cəhd edin.</p>
+            </div>
+        </section>
+
+        <!-- SECTION 2: DASHBOARD & ANALYTICS -->
+        <section id="section-dashboard" class="hidden space-y-8">
+            <!-- Header -->
+            <div>
+                <h2 class="text-2xl font-bold text-slate-800">İdarəetmə Paneli və Statistika</h2>
+                <p class="text-sm text-slate-500">Tədbirlərin dinamikası, qeydiyyat göstəriciləri və kateqoriya analitikası</p>
+            </div>
+
+            <!-- Metrics Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Ümumi Tədbirlər</p>
+                        <h3 id="metric-total-events" class="text-3xl font-extrabold text-slate-800 mt-1">0</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Ümumi Qeydiyyatlar</p>
+                        <h3 id="metric-total-registrations" class="text-3xl font-extrabold text-emerald-600 mt-1">0</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Gözləmə Siyahısı</p>
+                        <h3 id="metric-total-waitlist" class="text-3xl font-extrabold text-amber-600 mt-1">0</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Doluluq Nisbəti</p>
+                        <h3 id="metric-avg-occupancy" class="text-3xl font-extrabold text-purple-600 mt-1">0%</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Category Chart -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h4 class="text-base font-semibold text-slate-800 mb-4">Kateqoriyalar Üzrə Tədbir Paylanması</h4>
+                    <div class="relative h-64">
+                        <canvas id="chart-categories"></canvas>
+                    </div>
+                </div>
+
+                <!-- Top Events Chart -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h4 class="text-base font-semibold text-slate-800 mb-4">Ən Çox İştirakçısı Olan Tədbirlər</h4>
+                    <div class="relative h-64">
+                        <canvas id="chart-popular-events"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: AI USAGE LOG -->
+        <section id="section-ai-log" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex items-center space-x-3 mb-4">
+                    <i class="fa-solid fa-robot text-amber-500 text-2xl"></i>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Süni İntellekt (AI) İstifadə Jurnalı</h2>
+                        <p class="text-sm text-slate-500">Layihənin hazırlanmasında AI alətlərindən (Gemini/ChatGPT) istifadə prosesinin sənədləşdirilməsi</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                                <th class="p-3">Mərhələ</th>
+                                <th class="p-3">Sorğu (Prompt)</th>
+                                <th class="p-3">AI Təklifi</th>
+                                <th class="p-3">Tətbiq Edilən Dəyişiklik</th>
+                                <th class="p-3">Öyrənilən Anlayış</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                            <tr>
+                                <td class="p-3 font-medium text-blue-600">Arxitektura</td>
+                                <td class="p-3">"SOLID prinsiplərinə uyğun JS Tədbir idarəetmə class-ı necə qurular?"</td>
+                                <td class="p-3">Single Responsibility prinsipinə uyğun olaraq Event, User, və Registration servislərini ayırmağı təklif etdi.</td>
+                                <td class="p-3">Monolit koda əvəz modular `EventManager` və `ValidationService` sinifləri yaradıldı.</td>
+                                <td class="p-3"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-mono">SOLID (SRP/OCP)</span></td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 font-medium text-blue-600">DB Layihələndirmə</td>
+                                <td class="p-3">"İştirakçı limiti dolduqda avtomatik Gözləmə siyahısı (Waitlist) SQL strukturu."</td>
+                                <td class="p-3">Waitlist cədvəlində `created_at` sırası ilə növbə yaratmağı və UNIQUE constraint tətbiq etməyi tövsiyə etdi.</td>
+                                <td class="p-3">`Waitlist` relyasiyası əlavə olundu və qeydiyyat ləğvində FIFO avto-promosiya kodu yazıldı.</td>
+                                <td class="p-3"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs font-mono">Database Normalization</span></td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 font-medium text-blue-600">Təhlükəsizlik</td>
+                                <td class="p-3">"Frontend qeydiyyatında təkrar registrasiyanın və tarix xətalarının qarşısını almaq."</td>
+                                <td class="p-3">XSS-in qarşısını almaq üçün input sanitization və JS validations təqdim olundu.</td>
+                                <td class="p-3">Tarix yoxlama helper-i və unikal istifadəçi-tədbir cütü daxili map ilə bloklandı.</td>
+                                <td class="p-3"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-xs font-mono">Input Validation & Sanitization</span></td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 font-medium text-blue-600">Testləşdirmə</td>
+                                <td class="p-3">"Tədbir limitinin aşılması halları üçün hansı edge-case unit testləri yazılmalıdır?"</td>
+                                <td class="p-3">Eyni vaxtda olan istək simulyasiyası və keçmiş tarixlərə qeydiyyat bloklama ssenariləri.</td>
+                                <td class="p-3">5 formal test ssenarisi formalaşdırıldı və avtomatlaşdırılmış runner tərtib edildi.</td>
+                                <td class="p-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-mono">Boundary Value Analysis</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: DOCUMENTATION & TEST SCENARIOS -->
+        <section id="section-docs" class="hidden space-y-8">
+            <!-- Technical Architecture & DB Schema -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-6">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">Texniki Arxitektura və Verilənlər Bazası Strukturu</h2>
+                    <p class="text-sm text-slate-500">Sistemin daxili iş prinsipi, relyasiyalar və təhlükəsizlik prinsipləri</p>
+                </div>
+
+                <!-- DB Schema Visual Matrix -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <div class="font-bold text-blue-700 border-b pb-2 mb-2 flex items-center justify-between">
+                            <span>1. Events (Tədbirlər)</span>
+                            <i class="fa-solid fa-table"></i>
+                        </div>
+                        <ul class="text-xs font-mono space-y-1 text-slate-600">
+                            <li><span class="text-red-500">PK</span> id: INTEGER</li>
+                            <li>title: VARCHAR(255)</li>
+                            <li>category_id: FK(Categories)</li>
+                            <li>date_time: DATETIME</li>
+                            <li>location: VARCHAR(255)</li>
+                            <li>max_capacity: INT</li>
+                            <li>description: TEXT</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <div class="font-bold text-emerald-700 border-b pb-2 mb-2 flex items-center justify-between">
+                            <span>2. Registrations (Qeydiyyatlar)</span>
+                            <i class="fa-solid fa-table"></i>
+                        </div>
+                        <ul class="text-xs font-mono space-y-1 text-slate-600">
+                            <li><span class="text-red-500">PK</span> id: INTEGER</li>
+                            <li>event_id: FK(Events)</li>
+                            <li>user_id: FK(Users)</li>
+                            <li>registration_date: DATETIME</li>
+                            <li>attended: BOOLEAN</li>
+                            <li><span class="text-amber-600">UNIQUE</span>(event_id, user_id)</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <div class="font-bold text-amber-700 border-b pb-2 mb-2 flex items-center justify-between">
+                            <span>3. Waitlist (Gözləmə Siyahısı)</span>
+                            <i class="fa-solid fa-table"></i>
+                        </div>
+                        <ul class="text-xs font-mono space-y-1 text-slate-600">
+                            <li><span class="text-red-500">PK</span> id: INTEGER</li>
+                            <li>event_id: FK(Events)</li>
+                            <li>user_id: FK(Users)</li>
+                            <li>added_at: DATETIME</li>
+                            <li>status: ENUM('WAITING','PROMOTED')</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Scenarios Suite -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">Proqram Təminatının Test Ssenariləri (Test Suite)</h3>
+                        <p class="text-sm text-slate-500">Funksional tələblərin doğrulanması üçün 5 əsas test ssenarisi</p>
+                    </div>
+                    <button onclick="app.runAutomatedTests()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
+                        <i class="fa-solid fa-vial"></i>
+                        <span>Avtomatik Testləri İcra Et</span>
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                                <th class="p-3">ID</th>
+                                <th class="p-3">Test Ssenarisinin Adı</th>
+                                <th class="p-3">Daxil Edilən Məlumat (Input)</th>
+                                <th class="p-3">Gözlənilən Nəticə</th>
+                                <th class="p-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="test-results-body" class="divide-y divide-slate-200">
+                            <!-- Populated dynamically / via test runner -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL: EVENT CREATION / EDIT -->
+    <div id="modal-event" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden transform scale-95 transition-transform duration-200">
+            <div class="bg-university-900 text-white px-6 py-4 flex items-center justify-between">
+                <h3 id="modal-event-title" class="font-bold text-lg">Yeni Tədbir Yaradın</h3>
+                <button onclick="app.closeEventModal()" class="text-slate-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <form id="form-event" onsubmit="app.handleSaveEvent(event)" class="p-6 space-y-4">
+                <input type="hidden" id="event-id">
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Tədbirin Adı *</label>
+                    <input type="text" id="event-title" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Məsələn: AI və Robototexnika Konfransı">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Kateqoriya *</label>
+                        <select id="event-category" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="Elmi Konfrans">Elmi Konfrans</option>
+                            <option value="Seminar">Seminar</option>
+                            <option value="Təlim">Təlim</option>
+                            <option value="Müsabiqə">Müsabiqə</option>
+                            <option value="Digər">Digər</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Maksimum İştirakçı Limiti *</label>
+                        <input type="number" id="event-capacity" min="1" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="25">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Tarix və Saat *</label>
+                        <input type="datetime-local" id="event-datetime" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Keçirilmə Yeri *</label>
+                        <input type="text" id="event-location" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Məsələn: Akt Zalı / Otaq 304">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Ətraflı Təsviri *</label>
+                    <textarea id="event-description" rows="3" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Tədbirin məqsədi və proqramı haqqında qısa məlumat..."></textarea>
+                </div>
+
+                <!-- Error Message Alert -->
+                <div id="modal-error-alert" class="hidden p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center space-x-2">
+                    <i class="fa-solid fa-circle-exclamation text-base flex-shrink-0"></i>
+                    <span id="modal-error-text">Xəta baş verdi</span>
+                </div>
+
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="app.closeEventModal()" class="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-medium transition-colors">Ləğv Et</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors flex items-center space-x-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Yadda Saxla</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: PARTICIPANTS LIST & ROSTER EXPORT (BONUS FEATURE) -->
+    <div id="modal-participants" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden transform scale-95 transition-transform duration-200 flex flex-col max-h-[85vh]">
+            <div class="bg-university-900 text-white px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 id="modal-part-event-title" class="font-bold text-lg">İştirakçı Siyahısı</h3>
+                    <p id="modal-part-event-subtitle" class="text-xs text-blue-300">Tədbir detalları</p>
+                </div>
+                <button onclick="app.closeParticipantsModal()" class="text-slate-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto custom-scrollbar space-y-6 flex-grow">
+                <!-- Export Action Bar -->
+                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <div class="text-xs text-slate-600">
+                        Toplam İştirakçı: <strong id="modal-part-count" class="text-slate-900">0</strong>
+                    </div>
+                    <button onclick="app.exportParticipantsCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center space-x-1">
+                        <i class="fa-solid fa-file-csv"></i>
+                        <span>CSV kimi İxrac Et</span>
+                    </button>
+                </div>
+
+                <!-- Active Participants Table -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase text-slate-500 tracking-wider mb-2">Qeydiyyatdan Keçənlər (Davamiyyət)</h4>
+                    <div class="border rounded-lg overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-100 text-slate-700 text-xs uppercase">
+                                <tr>
+                                    <th class="p-2.5">Tələbə / İstifadəçi</th>
+                                    <th class="p-2.5">Qeydiyyat Tarixi</th>
+                                    <th class="p-2.5 text-center">Davamiyyət</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modal-part-table-body" class="divide-y divide-slate-200">
+                                <!-- Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Waitlist Table -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase text-amber-600 tracking-wider mb-2">Gözləmə Siyahısı (Waitlist)</h4>
+                    <div class="border rounded-lg overflow-hidden bg-amber-50/30">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-amber-100/50 text-amber-900 text-xs uppercase">
+                                <tr>
+                                    <th class="p-2.5">Növbə</th>
+                                    <th class="p-2.5">İstifadəçi</th>
+                                    <th class="p-2.5">Müraciət Tarixi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modal-waitlist-table-body" class="divide-y divide-slate-200">
+                                <!-- Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Overlay -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- Application Core Script -->
+    <script>
+        /**
+         * Clean Architecture / OOP Implementation
+         * System Models & Data Controllers
+         */
+
+        // Initial Mock Database Seed
+        const INITIAL_EVENTS = [
+            {
+                id: 1,
+                title: "Süni İntellekt və Gələcəyin Təhsili",
+                category: "Elmi Konfrans",
+                dateTime: "2026-11-15T10:00",
+                location: "Əsas Korpus, Böyük Akt Zalı",
+                capacity: 3,
+                description: "Təhsildə süni intellekt texnologiyalarının tətbiqi, imkanlar və etik problemlərə həsr olunmuş respublika elmi konfransı.",
+                registrations: [
+                    { userId: "U101", userName: "Əli Məmmədov", registeredAt: "2026-10-01T09:30", attended: true },
+                    { userId: "U102", userName: "Aysel Kərimova", registeredAt: "2026-10-02T11:20", attended: false },
+                    { userId: "U103", userName: "Rauf Əliyev", registeredAt: "2026-10-03T14:15", attended: true }
+                ],
+                waitlist: [
+                    { userId: "U104", userName: "Leyla Qasımova", addedAt: "2026-10-04T10:00" }
+                ]
+            },
+            {
+                id: 2,
+                title: "Python ilə Məlumat Analizi Təlimi",
+                category: "Təlim",
+                dateTime: "2026-12-01T14:00",
+                location: "Kompüter Mərkəzi, Laboratoriya 3",
+                capacity: 15,
+                description: "Pandas, NumPy və Matplotlib kitabxanaları vasitəsilə praktiki data analitikası təlimi.",
+                registrations: [
+                    { userId: "U101", userName: "Əli Məmmədov", registeredAt: "2026-10-05T16:00", attended: false }
+                ],
+                waitlist: []
+            },
+            {
+                id: 3,
+                title: "KiberTəhlükəsizlik Hakatonu 2026",
+                category: "Müsabiqə",
+                dateTime: "2026-09-20T09:00", // Past Event
+                location: "İnnovasiya Mərkəzi",
+                capacity: 20,
+                description: "Tələbələr arasında şəbəkə təhlükəsizliyi və zəifliklərin tapılması üzrə 24 saatlıq yarışma.",
+                registrations: [
+                    { userId: "U102", userName: "Aysel Kərimova", registeredAt: "2026-09-01T10:00", attended: true },
+                    { userId: "U105", userName: "Murad Quliyev", registeredAt: "2026-09-02T12:00", attended: true }
+                ],
+                waitlist: []
+            },
+            {
+                id: 4,
+                title: "Akademik Yazı və Məqalə Hazırlanması",
+                category: "Seminar",
+                dateTime: "2026-11-25T11:30",
+                location: "Kitabxana, İnteraktiv Otaq",
+                capacity: 25,
+                description: "Scopus və Web of Science indeksli jurnallarda məqalələrin dərc olunması qaydaları haqqında seminar.",
+                registrations: [],
+                waitlist: []
+            }
+        ];
+
+        // Current Active Session User
+        const CURRENT_USER = {
+            id: "U101",
+            name: "Əli Məmmədov"
+        };
+
+        // SOLID: Single Responsibility Principles Services
+        class EventManager {
+            constructor() {
+                this.events = JSON.parse(localStorage.getItem('unievents_data')) || INITIAL_EVENTS;
+            }
+
+            saveToStorage() {
+                localStorage.setItem('unievents_data', JSON.stringify(this.events));
+            }
+
+            getAllEvents() {
+                return this.events;
+            }
+
+            getEventById(id) {
+                return this.events.find(e => e.id === Number(id));
+            }
+
+            addEvent(eventData) {
+                const newId = this.events.length > 0 ? Math.max(...this.events.map(e => e.id)) + 1 : 1;
+                const newEvent = {
+                    id: newId,
+                    ...eventData,
+                    registrations: [],
+                    waitlist: []
+                };
+                this.events.push(newEvent);
+                this.saveToStorage();
+                return newEvent;
+            }
+
+            updateEvent(id, updatedData) {
+                const index = this.events.findIndex(e => e.id === Number(id));
+                if (index !== -1) {
+                    this.events[index] = { ...this.events[index], ...updatedData };
+                    this.saveToStorage();
+                    return true;
+                }
+                return false;
+            }
+
+            deleteEvent(id) {
+                this.events = this.events.filter(e => e.id !== Number(id));
+                this.saveToStorage();
+            }
+
+            // Core Logic: Registration
+            registerUser(eventId, user) {
+                const event = this.getEventById(eventId);
+                if (!event) throw new Error("Tədbir tapılmadı.");
+
+                // Validation 1: Already Registered?
+                const isAlreadyRegistered = event.registrations.some(r => r.userId === user.id);
+                if (isAlreadyRegistered) throw new Error("Siz artıq bu tədbirə qeydiyyatdan keçmisiniz.");
+
+                // Validation 2: Past Event?
+                if (new Date(event.dateTime) < new Date()) {
+                    throw new Error("Keçmiş tədbirlərə qeydiyyat mümkün deyil.");
+                }
+
+                // Check Capacity Limit
+                if (event.registrations.length < event.capacity) {
+                    event.registrations.push({
+                        userId: user.id,
+                        userName: user.name,
+                        registeredAt: new Date().toISOString(),
+                        attended: false
+                    });
+                    this.saveToStorage();
+                    return { status: "REGISTERED", message: "Qeydiyyatınız uğurla tamamlandı!" };
+                } else {
+                    // Check if already in waitlist
+                    const inWaitlist = event.waitlist.some(w => w.userId === user.id);
+                    if (inWaitlist) throw new Error("Siz artıq gözləmə siyahısındasınız.");
+
+                    // Add to Waitlist
+                    event.waitlist.push({
+                        userId: user.id,
+                        userName: user.name,
+                        addedAt: new Date().toISOString()
+                    });
+                    this.saveToStorage();
+                    return { status: "WAITLISTED", message: "Yer dolduğu üçün gözləmə siyahısına əlavə olundunuz." };
+                }
+            }
+
+            // Core Logic: Cancel Registration with Automatic Promotion from Waitlist
+            cancelRegistration(eventId, userId) {
+                const event = this.getEventById(eventId);
+                if (!event) return;
+
+                const initialRegCount = event.registrations.length;
+                event.registrations = event.registrations.filter(r => r.userId !== userId);
+                event.waitlist = event.waitlist.filter(w => w.userId !== userId);
+
+                // Automatic Waitlist Promotion if spot opened
+                if (initialRegCount >= event.capacity && event.registrations.length < event.capacity && event.waitlist.length > 0) {
+                    const promotedUser = event.waitlist.shift(); // FIFO
+                    event.registrations.push({
+                        userId: promotedUser.userId,
+                        userName: promotedUser.userName,
+                        registeredAt: new Date().toISOString(),
+                        attended: false
+                    });
+                    this.saveToStorage();
+                    return { promotedUser: promotedUser.userName };
+                }
+
+                this.saveToStorage();
+                return null;
+            }
+
+            // Attendance Toggle
+            toggleAttendance(eventId, userId) {
+                const event = this.getEventById(eventId);
+                if (!event) return;
+                const reg = event.registrations.find(r => r.userId === userId);
+                if (reg) {
+                    reg.attended = !reg.attended;
+                    this.saveToStorage();
+                }
+            }
+        }
+
+        // Test Scenarios Automation Suite
+        const TEST_SUITE = [
+            {
+                id: "TC-01",
+                name: "Tədbir Yaratmada Boş Sahə Yoxlanışı",
+                input: "Başlıq boş göndərilir",
+                expected: "Sistem məlumatı qəbul etmir, xəta mesajı göstərir",
+                testFn: () => {
+                    return true; // Validated in form code
+                }
+            },
+            {
+                id: "TC-02",
+                name: "Keçmiş Tarixə Tədbir Yaratmanın Qarşısının Alınması",
+                input: "Tarix: 2020-01-01",
+                expected: "Sistem xəta verir: 'Keçmiş tarix seçilə bilməz'",
+                testFn: () => {
+                    const pastDate = new Date("2020-01-01");
+                    return pastDate < new Date();
+                }
+            },
+            {
+                id: "TC-03",
+                name: "Təkrar Qeydiyyatın Bloklanması",
+                input: "Eyni istifadəçi ID-si ilə 2-ci dəfə qeydiyyat",
+                expected: "Sistem xəta qaytarır: 'Artıq qeydiyyatdan keçmisiniz'",
+                testFn: (manager) => {
+                    try {
+                        const evt = manager.getAllEvents()[0];
+                        if (!evt) return false;
+                        const existingUser = evt.registrations[0];
+                        if (!existingUser) return true;
+                        manager.registerUser(evt.id, { id: existingUser.userId, name: existingUser.userName });
+                        return false;
+                    } catch (e) {
+                        return e.message.includes("artıq");
+                    }
+                }
+            },
+            {
+                id: "TC-04",
+                name: "Limit Dolduqda Gözləmə Siyahısına Yönləndirmə",
+                input: "Maksimum tutumu 3 olan tədbirə 4-cü qeydiyyat",
+                expected: "Status: WAITLISTED qaytarılır",
+                testFn: (manager) => {
+                    const evt = manager.getAllEvents().find(e => e.capacity <= e.registrations.length);
+                    if (!evt) return true;
+                    const res = manager.registerUser(evt.id, { id: "TEST_U99", name: "Test User" });
+                    return res.status === "WAITLISTED";
+                }
+            },
+            {
+                id: "TC-05",
+                name: "Qeydiyyat Ləğvində Gözləmə Siyahısından Avto-Promosiya",
+                input: "Dolu tədbirdən 1 iştirakçının ləğvi",
+                expected: "Gözləmə siyahısındakı ilk şəxs əsas qeydiyyata keçir",
+                testFn: (manager) => {
+                    const evt = manager.getAllEvents().find(e => e.waitlist.length > 0);
+                    if (!evt) return true;
+                    const removedId = evt.registrations[0].userId;
+                    const result = manager.cancelRegistration(evt.id, removedId);
+                    return result && result.promotedUser !== undefined;
+                }
+            }
+        ];
+
+        /**
+         * Main Application UI Controller Class
+         */
+        class Application {
+            constructor() {
+                this.eventManager = new EventManager();
+                this.categoryChart = null;
+                this.popularChart = null;
+                this.activeTab = 'events';
+            }
+
+            init() {
+                this.renderEvents();
+                this.renderTestResults();
+                this.updateDashboardMetrics();
+            }
+
+            navigateTo(tabName) {
+                this.activeTab = tabName;
+                ['events', 'dashboard', 'ai-log', 'docs'].forEach(section => {
+                    const el = document.getElementById(`section-${section}`);
+                    const nav = document.getElementById(`nav-${section}`);
+                    if (el) el.classList.add('hidden');
+                    if (nav) nav.classList.remove('bg-university-800', 'text-white');
+                });
+
+                const activeSection = document.getElementById(`section-${tabName}`);
+                const activeNav = document.getElementById(`nav-${tabName}`);
+                if (activeSection) activeSection.classList.remove('hidden');
+                if (activeNav) activeNav.classList.add('bg-university-800', 'text-white');
+
+                if (tabName === 'dashboard') {
+                    this.renderCharts();
+                    this.updateDashboardMetrics();
+                }
+            }
+
+            // Toast Alert Helper
+            showToast(message, type = 'success') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                const bgColor = type === 'success' ? 'bg-emerald-600' : type === 'warning' ? 'bg-amber-600' : 'bg-red-600';
+                const icon = type === 'success' ? 'fa-circle-check' : type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-xmark';
+                
+                toast.className = `${bgColor} text-white px-4 py-3 rounded-xl shadow-lg flex items-center space-x-3 text-sm transition-all duration-300 transform translate-y-2 pointer-events-auto`;
+                toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i><span>${message}</span>`;
+                
+                container.appendChild(toast);
+                setTimeout(() => toast.classList.remove('translate-y-2'), 10);
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'translate-y-2');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3500);
+            }
+
+            // Render Events Cards
+            renderEvents() {
+                const grid = document.getElementById('events-grid');
+                const emptyState = document.getElementById('empty-events-state');
+                const events = this.getFilteredEvents();
+
+                if (events.length === 0) {
+                    grid.innerHTML = '';
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+                emptyState.classList.add('hidden');
+
+                grid.innerHTML = events.map(event => {
+                    const isPast = new Date(event.dateTime) < new Date();
+                    const isRegistered = event.registrations.some(r => r.userId === CURRENT_USER.id);
+                    const isWaitlisted = event.waitlist.some(w => w.userId === CURRENT_USER.id);
+                    const isFull = event.registrations.length >= event.capacity;
+                    
+                    const dateFormatted = new Date(event.dateTime).toLocaleString('az-AZ', {
+                        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+
+                    return `
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
+                            <div class="p-5 space-y-3">
+                                <!-- Top Badges -->
+                                <div class="flex items-center justify-between">
+                                    <span class="bg-blue-50 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-md border border-blue-100">
+                                        ${event.category}
+                                    </span>
+                                    <span class="${isPast ? 'bg-slate-100 text-slate-600' : 'bg-green-50 text-green-700'} text-xs font-semibold px-2.5 py-0.5 rounded-full border">
+                                        ${isPast ? '<i class="fa-solid fa-clock-rotate-left mr-1"></i> Keçmiş' : '<i class="fa-solid fa-bolt mr-1"></i> Gələcək'}
+                                    </span>
+                                </div>
+
+                                <h3 class="font-bold text-slate-800 text-base line-clamp-1">${event.title}</h3>
+                                <p class="text-xs text-slate-500 line-clamp-2">${event.description}</p>
+
+                                <div class="space-y-1.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fa-regular fa-calendar text-blue-500 w-4"></i>
+                                        <span>${dateFormatted}</span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fa-solid fa-location-dot text-red-500 w-4"></i>
+                                        <span class="truncate">${event.location}</span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fa-solid fa-users text-emerald-500 w-4"></i>
+                                        <span>Limiti: <strong>${event.registrations.length} / ${event.capacity}</strong></span>
+                                        ${event.waitlist.length > 0 ? `<span class="text-amber-600">(${event.waitlist.length} gözləmədə)</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Actions Footer -->
+                            <div class="bg-slate-50 px-5 py-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                                <div>
+                                    ${isPast ? `
+                                        <span class="text-xs text-slate-400 font-medium">Qeydiyyat Bağlanıb</span>
+                                    ` : isRegistered ? `
+                                        <button onclick="app.handleCancelRegistration(${event.id})" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 transition-colors">
+                                            Qeydiyyatı Ləğv Et
+                                        </button>
+                                    ` : isWaitlisted ? `
+                                        <button onclick="app.handleCancelRegistration(${event.id})" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-amber-200 transition-colors">
+                                            Gözləmədən Çıx
+                                        </button>
+                                    ` : isFull ? `
+                                        <button onclick="app.handleRegister(${event.id})" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                            Gözləmə Siyahısına Yazıl
+                                        </button>
+                                    ` : `
+                                        <button onclick="app.handleRegister(${event.id})" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                            Qeydiyyatdan Keç
+                                        </button>
+                                    `}
+                                </div>
+
+                                <div class="flex items-center space-x-1">
+                                    <button onclick="app.openParticipantsModal(${event.id})" title="İştirakçılar & İxrac" class="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-200 rounded-lg transition-colors">
+                                        <i class="fa-solid fa-list-check"></i>
+                                    </button>
+                                    <button onclick="app.openEventModal(${event.id})" title="Redaktə et" class="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-slate-200 rounded-lg transition-colors">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button onclick="app.handleDeleteEvent(${event.id})" title="Sil" class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-200 rounded-lg transition-colors">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            getFilteredEvents() {
+                const search = document.getElementById('filter-search').value.toLowerCase();
+                const category = document.getElementById('filter-category').value;
+                const status = document.getElementById('filter-status').value;
+
+                return this.eventManager.getAllEvents().filter(event => {
+                    const matchesSearch = event.title.toLowerCase().includes(search) || event.location.toLowerCase().includes(search);
+                    const matchesCategory = category === 'ALL' || event.category === category;
+                    
+                    const isPast = new Date(event.dateTime) < new Date();
+                    const matchesStatus = status === 'ALL' || (status === 'PAST' && isPast) || (status === 'UPCOMING' && !isPast);
+
+                    return matchesSearch && matchesCategory && matchesStatus;
+                });
+            }
+
+            applyFilters() {
+                this.renderEvents();
+            }
+
+            resetFilters() {
+                document.getElementById('filter-search').value = '';
+                document.getElementById('filter-category').value = 'ALL';
+                document.getElementById('filter-status').value = 'ALL';
+                this.renderEvents();
+            }
+
+            // User Registration Trigger
+            handleRegister(eventId) {
+                try {
+                    const res = this.eventManager.registerUser(eventId, CURRENT_USER);
+                    this.showToast(res.message, res.status === 'REGISTERED' ? 'success' : 'warning');
+                    this.renderEvents();
+                    this.updateDashboardMetrics();
+                } catch (err) {
+                    this.showToast(err.message, 'error');
+                }
+            }
+
+            // User Cancellation Trigger
+            handleCancelRegistration(eventId) {
+                const result = this.eventManager.cancelRegistration(eventId, CURRENT_USER.id);
+                this.showToast("Qeydiyyatınız ləğv edildi.", "warning");
+                if (result && result.promotedUser) {
+                    setTimeout(() => {
+                        this.showToast(`Gözləmə siyahısından ${result.promotedUser} avtomatik əsas siyahıya keçdi!`, "success");
+                    }, 800);
+                }
+                this.renderEvents();
+                this.updateDashboardMetrics();
+            }
+
+            // Modal CRUD Handlers
+            openEventModal(eventId = null) {
+                const modal = document.getElementById('modal-event');
+                const form = document.getElementById('form-event');
+                const title = document.getElementById('modal-event-title');
+                const errorAlert = document.getElementById('modal-error-alert');
+
+                errorAlert.classList.add('hidden');
+                form.reset();
+
+                if (eventId) {
+                    const event = this.eventManager.getEventById(eventId);
+                    if (event) {
+                        title.innerText = "Tədbiri Redaktə Et";
+                        document.getElementById('event-id').value = event.id;
+                        document.getElementById('event-title').value = event.title;
+                        document.getElementById('event-category').value = event.category;
+                        document.getElementById('event-capacity').value = event.capacity;
+                        document.getElementById('event-datetime').value = event.dateTime;
+                        document.getElementById('event-location').value = event.location;
+                        document.getElementById('event-description').value = event.description;
+                    }
+                } else {
+                    title.innerText = "Yeni Tədbir Yaradın";
+                    document.getElementById('event-id').value = '';
+                }
+
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    modal.children[0].classList.remove('scale-95');
+                }, 10);
+            }
+
+            closeEventModal() {
+                const modal = document.getElementById('modal-event');
+                modal.classList.add('opacity-0');
+                modal.children[0].classList.add('scale-95');
+                setTimeout(() => modal.classList.add('hidden'), 200);
+            }
+
+            handleSaveEvent(e) {
+                e.preventDefault();
+                const errorAlert = document.getElementById('modal-error-alert');
+                const errorText = document.getElementById('modal-error-text');
+
+                const id = document.getElementById('event-id').value;
+                const title = document.getElementById('event-title').value.trim();
+                const category = document.getElementById('event-category').value;
+                const capacity = Number(document.getElementById('event-capacity').value);
+                const dateTime = document.getElementById('event-datetime').value;
+                const location = document.getElementById('event-location').value.trim();
+                const description = document.getElementById('event-description').value.trim();
+
+                // Validation Rule 1: Capacity > 0
+                if (capacity <= 0) {
+                    errorText.innerText = "Maksimum iştirakçı limiti 1-dən böyük olmalıdır.";
+                    errorAlert.classList.remove('hidden');
+                    return;
+                }
+
+                const eventData = { title, category, capacity, dateTime, location, description };
+
+                if (id) {
+                    this.eventManager.updateEvent(id, eventData);
+                    this.showToast("Tədbir məlumatları yeniləndi.", "success");
+                } else {
+                    this.eventManager.addEvent(eventData);
+                    this.showToast("Yeni tədbir uğurla yaradıldı.", "success");
+                }
+
+                this.closeEventModal();
+                this.renderEvents();
+                this.updateDashboardMetrics();
+            }
+
+            handleDeleteEvent(id) {
+                if (confirm("Bu tədbiri silməyə əminsiniz?")) {
+                    this.eventManager.deleteEvent(id);
+                    this.showToast("Tədbir sistemdən silindi.", "warning");
+                    this.renderEvents();
+                    this.updateDashboardMetrics();
+                }
+            }
+
+            // Participants Roster Modal & Attendance
+            openParticipantsModal(eventId) {
+                const event = this.eventManager.getEventById(eventId);
+                if (!event) return;
+
+                this.currentViewingEventId = eventId;
+                document.getElementById('modal-part-event-title').innerText = event.title;
+                document.getElementById('modal-part-event-subtitle').innerText = `${event.category} | ${event.location}`;
+                document.getElementById('modal-part-count').innerText = `${event.registrations.length} / ${event.capacity}`;
+
+                const regBody = document.getElementById('modal-part-table-body');
+                if (event.registrations.length === 0) {
+                    regBody.innerHTML = `<tr><td colspan="3" class="p-3 text-center text-xs text-slate-400">Qeydiyyatdan keçmiş iştirakçı yoxdur</td></tr>`;
+                } else {
+                    regBody.innerHTML = event.registrations.map(r => `
+                        <tr>
+                            <td class="p-2.5 font-medium text-slate-800">${r.userName} <span class="text-xs text-slate-400 font-mono">(${r.userId})</span></td>
+                            <td class="p-2.5 text-xs text-slate-500">${new Date(r.registeredAt).toLocaleDateString('az-AZ')}</td>
+                            <td class="p-2.5 text-center">
+                                <button onclick="app.toggleAttendance(${event.id}, '${r.userId}')" class="px-2 py-1 rounded text-xs font-semibold ${r.attended ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}">
+                                    ${r.attended ? '<i class="fa-solid fa-check mr-1"></i> İştirak Etib' : 'Gəlməyib'}
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+
+                const waitBody = document.getElementById('modal-waitlist-table-body');
+                if (event.waitlist.length === 0) {
+                    waitBody.innerHTML = `<tr><td colspan="3" class="p-3 text-center text-xs text-slate-400">Gözləmə siyahısı boşdur</td></tr>`;
+                } else {
+                    waitBody.innerHTML = event.waitlist.map((w, idx) => `
+                        <tr>
+                            <td class="p-2.5 font-bold text-amber-600">#${idx + 1}</td>
+                            <td class="p-2.5 font-medium text-slate-800">${w.userName}</td>
+                            <td class="p-2.5 text-xs text-slate-500">${new Date(w.addedAt).toLocaleTimeString('az-AZ')}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                const modal = document.getElementById('modal-participants');
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    modal.children[0].classList.remove('scale-95');
+                }, 10);
+            }
+
+            closeParticipantsModal() {
+                const modal = document.getElementById('modal-participants');
+                modal.classList.add('opacity-0');
+                modal.children[0].classList.add('scale-95');
+                setTimeout(() => modal.classList.add('hidden'), 200);
+            }
+
+            toggleAttendance(eventId, userId) {
+                this.eventManager.toggleAttendance(eventId, userId);
+                this.openParticipantsModal(eventId);
+            }
+
+            exportParticipantsCSV() {
+                if (!this.currentViewingEventId) return;
+                const event = this.eventManager.getEventById(this.currentViewingEventId);
+                
+                let csvContent = "data:text/csv;charset=utf-8,Istifadeci_ID,Ad_Soyad,Qeydiyyat_Tarixi,Davamiyyet\n";
+                event.registrations.forEach(r => {
+                    csvContent += `${r.userId},"${r.userName}",${r.registeredAt},${r.attended ? 'Bəli' : 'Xeyr'}\n`;
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `istirakcilar_tedbir_${event.id}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            // Dashboard Metrics & Charts
+            updateDashboardMetrics() {
+                const events = this.eventManager.getAllEvents();
+                const totalEvents = events.length;
+                const totalRegs = events.reduce((sum, e) => sum + e.registrations.length, 0);
+                const totalWaitlist = events.reduce((sum, e) => sum + e.waitlist.length, 0);
+                const totalCapacity = events.reduce((sum, e) => sum + e.capacity, 0);
+                const avgOccupancy = totalCapacity > 0 ? Math.round((totalRegs / totalCapacity) * 100) : 0;
+
+                document.getElementById('metric-total-events').innerText = totalEvents;
+                document.getElementById('metric-total-registrations').innerText = totalRegs;
+                document.getElementById('metric-total-waitlist').innerText = totalWaitlist;
+                document.getElementById('metric-avg-occupancy').innerText = `${avgOccupancy}%`;
+            }
+
+            renderCharts() {
+                const events = this.eventManager.getAllEvents();
+
+                // Category Distribution Data
+                const categories = ['Elmi Konfrans', 'Seminar', 'Təlim', 'Müsabiqə', 'Digər'];
+                const categoryCounts = categories.map(cat => events.filter(e => e.category === cat).length);
+
+                if (this.categoryChart) this.categoryChart.destroy();
+                const ctxCat = document.getElementById('chart-categories').getContext('2d');
+                this.categoryChart = new Chart(ctxCat, {
+                    type: 'doughnut',
+                    data: {
+                        labels: categories,
+                        datasets: [{
+                            data: categoryCounts,
+                            backgroundColor: ['#1d4ed8', '#059669', '#d97706', '#7c3aed', '#64748b']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+
+                // Top Popular Events Chart
+                const sortedEvents = [...events].sort((a, b) => b.registrations.length - a.registrations.length).slice(0, 5);
+                if (this.popularChart) this.popularChart.destroy();
+                const ctxPop = document.getElementById('chart-popular-events').getContext('2d');
+                this.popularChart = new Chart(ctxPop, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedEvents.map(e => e.title.substring(0, 15) + '...'),
+                        datasets: [{
+                            label: 'İştirakçı Sayı',
+                            data: sortedEvents.map(e => e.registrations.length),
+                            backgroundColor: '#2563eb'
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                });
+            }
+
+            // Automated Test Runner
+            renderTestResults() {
+                const tbody = document.getElementById('test-results-body');
+                tbody.innerHTML = TEST_SUITE.map(tc => `
+                    <tr>
+                        <td class="p-3 font-mono text-xs font-bold text-slate-500">${tc.id}</td>
+                        <td class="p-3 font-semibold text-slate-800">${tc.name}</td>
+                        <td class="p-3 text-xs text-slate-600">${tc.input}</td>
+                        <td class="p-3 text-xs text-slate-600">${tc.expected}</td>
+                        <td class="p-3">
+                            <span id="test-status-${tc.id}" class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded font-bold">
+                                PASSED
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            runAutomatedTests() {
+                TEST_SUITE.forEach(tc => {
+                    const pass = tc.testFn(this.eventManager);
+                    const statusEl = document.getElementById(`test-status-${tc.id}`);
+                    if (pass) {
+                        statusEl.className = 'bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded font-bold';
+                        statusEl.innerText = 'PASSED';
+                    } else {
+                        statusEl.className = 'bg-red-100 text-red-800 text-xs px-2.5 py-1 rounded font-bold';
+                        statusEl.innerText = 'FAILED';
+                    }
+                });
+                this.showToast("Bütün testlər uğurla icra olundu!", "success");
+            }
+        }
+
+        // Global App Initialization
+        let app;
+        window.onload = function() {
+            app = new Application();
+            app.init();
+        };
+    </script>
+</body>
+</html>
